@@ -19,6 +19,8 @@ var duScroll = angular.module('duScroll', [
 ])
   //Default animation duration for smoothScroll directive
   .value('duScrollDuration', 350)
+  //Default animation delay for smoothScroll directive
+  .value('duScrollDelay', 0)
   //Scrollspy debounce interval, set to 0 to disable
   .value('duScrollSpyWait', 100)
   //Wether or not multiple scrollspies can be active at once
@@ -482,11 +484,13 @@ angular.module('duScroll.scrollContainerAPI', [])
 
 
 angular.module('duScroll.smoothScroll', ['duScroll.scrollHelpers', 'duScroll.scrollContainerAPI'])
-.directive('duSmoothScroll', ["duScrollDuration", "duScrollOffset", "scrollContainerAPI", function(duScrollDuration, duScrollOffset, scrollContainerAPI) {
+.directive('duSmoothScroll', ["$timeout", "duScrollDuration", "duScrollDelay", "duScrollOffset", "scrollContainerAPI", function($timeout, duScrollDuration, duScrollDelay, duScrollOffset, scrollContainerAPI) {
   'use strict';
 
   return {
     link : function($scope, $element, $attr) {
+      var delayTimeout;
+
       $element.on('click', function(e) {
         if((!$attr.href || $attr.href.indexOf('#') === -1) && $attr.duSmoothScroll === '') return;
 
@@ -500,13 +504,24 @@ angular.module('duScroll.smoothScroll', ['duScroll.scrollHelpers', 'duScroll.scr
 
         var offset    = $attr.offset ? parseInt($attr.offset, 10) : duScrollOffset;
         var duration  = $attr.duration ? parseInt($attr.duration, 10) : duScrollDuration;
+        var delay  = $attr.delay ? parseInt($attr.delay, 10) : duScrollDelay;
         var container = scrollContainerAPI.getContainer($scope);
 
-        container.duScrollToElement(
-          angular.element(target),
-          isNaN(offset) ? 0 : offset,
-          isNaN(duration) ? 0 : duration
-        );
+        var scrollFn = function() {
+          container.duScrollToElement(
+            angular.element(target),
+            isNaN(offset) ? 0 : offset,
+            isNaN(duration) ? 0 : duration
+          );
+        }
+
+        if (delay) {
+          $timeout.cancel(delayTimeout);
+          delayTimeout = $timeout(scrollFn, delay);
+
+        } else {
+          scrollFn();
+        }
       });
     }
   };
